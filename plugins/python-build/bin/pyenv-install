@@ -243,6 +243,7 @@ trap cleanup SIGINT
 
 # Invoke `python-build` and record the exit status in $STATUS.
 STATUS=0
+echo RUN: python-build $KEEP $VERBOSE $HAS_PATCH $DEBUG "$DEFINITION" "$PREFIX" || STATUS="$?"
 python-build $KEEP $VERBOSE $HAS_PATCH $DEBUG "$DEFINITION" "$PREFIX" || STATUS="$?"
 
 # Display a more helpful message if the definition wasn't found.
