@@ -19,6 +19,7 @@ PYTHON_BUILD_VERSION="20180424"
 OLDIFS="$IFS"
 
 set -E
+set -x
 exec 3<&2 # preserve original stderr at fd 3
 
 
@@ -395,7 +396,7 @@ fetch_tarball() {
     fi
   fi
 
-  local tar_args="xzf"
+  local tar_args="xzvf"
   local package_filename="${package_name}.tar.gz"
 
   if [ "$package_url" != "${package_url%bz2}" ]; then
@@ -422,6 +423,7 @@ fetch_tarball() {
     download_tarball "$package_url" "$package_filename" "$checksum"
   fi
 
+  pwd
   { if tar $tar_args "$package_filename"; then
       if [ ! -d "$package_name" ]; then
         extracted_dir="$(find_extracted_directory)"
@@ -740,6 +742,7 @@ build_package_warn_unsupported() {
 }
 
 build_package_standard_build() {
+  set -x
   local package_name="$1"
 
   if [ "${MAKEOPTS+defined}" ]; then
@@ -1487,6 +1490,10 @@ use_freebsd_pkg() {
   fi
 }
 
+iterm2() {
+    return 1
+}
+
 has_broken_mac_readline() {
   # Mac OS X 10.4 has broken readline.
   # https://github.com/pyenv/pyenv/issues/23
@@ -1524,8 +1531,29 @@ build_package_mac_readline() {
 
   # Make sure pkg-config finds our build first.
   export PKG_CONFIG_PATH="${READLINE_PREFIX_PATH}/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+  package_option readline configure --disable-shared
 
   build_package_standard "$@"
+}
+
+build_package_mac_gdbm() {
+    package_option gdbm configure --disable-shared
+    build_package_standard "$@"
+}
+
+build_package_mac_sqlite() {
+    package_option sqlite configure --disable-shared
+    build_package_standard "$@"
+}
+
+build_package_mac_xz() {
+    package_option xz configure --disable-shared
+    build_package_standard "$@"
+}
+
+build_package_mac_zlib() {
+    package_option zlib configure --static
+    build_package_standard "$@"
 }
 
 has_broken_mac_openssl() {
@@ -1582,8 +1610,8 @@ build_package_mac_openssl() {
   local nokerberos
   [[ "$1" != openssl-1.0.* ]] || nokerberos=1
 
-  # Compile a shared lib with zlib dynamically linked.
-  package_option openssl configure --openssldir="$OPENSSLDIR" zlib-dynamic no-ssl3 shared ${nokerberos:+no-ssl2 no-krb5}
+  package_option openssl configure --openssldir="$OPENSSLDIR" zlib no-ssl3 ${nokerberos:+no-ssl2 no-krb5}
+  package_option openssl configure no-shared
 
   # Default MAKE_OPTS are -j 2 which can confuse the build. Thankfully, make
   # gives precedence to the last -j option, so we can override that.
@@ -1642,6 +1670,7 @@ use_homebrew_zlib() {
 }
 
 use_xcode_sdk_zlib() {
+  set -x
   local xc_sdk_path="$(xcrun --show-sdk-path 2>/dev/null || true)"
   if [ -d "$xc_sdk_path" ]; then
     echo "python-build: use zlib from xcode sdk"
@@ -1653,6 +1682,7 @@ use_xcode_sdk_zlib() {
 build_package_ldflags_dirs() {
   local arg dir
   set - $LDFLAGS
+  set -x
   while [ $# -gt 0 ]; do
     dir=""
     case "$1" in
@@ -1665,7 +1695,7 @@ build_package_ldflags_dirs() {
 }
 
 build_package_enable_shared() {
-    package_option python configure --enable-shared
+    package_option python configure --disable-shared
 }
 
 build_package_auto_tcltk() {
