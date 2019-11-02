@@ -775,16 +775,14 @@ build_package_standard_build() {
       export CC=clang
     fi
     echo "About to run configure in $PWD with CFLAGS=$CFLAGS"
-    read xyz
+    #read xyz
     ${!PACKAGE_CONFIGURE:-./configure} --prefix="${!PACKAGE_PREFIX_PATH:-$PREFIX_PATH}" \
       $CONFIGURE_OPTS ${!PACKAGE_CONFIGURE_OPTS} "${!PACKAGE_CONFIGURE_OPTS_ARRAY}" || return 1
   ) >&4 2>&1
 
-  if [ -n "$2" ]; then
-      echo "Run make in $PWD with target $2"
-      { "$MAKE" "$2"
-      } >&4 2>&1
-  fi
+  echo "About to run" "$MAKE" $MAKE_OPTS ${!PACKAGE_MAKE_OPTS} "${!PACKAGE_MAKE_OPTS_ARRAY}"
+  echo "PWD=$PWD"
+  env
 
   { "$MAKE" $MAKE_OPTS ${!PACKAGE_MAKE_OPTS} "${!PACKAGE_MAKE_OPTS_ARRAY}"
   } >&4 2>&1
@@ -797,6 +795,15 @@ build_package_standard_install() {
   local PACKAGE_MAKE_INSTALL_OPTS="${package_var_name}_MAKE_INSTALL_OPTS"
   local PACKAGE_MAKE_INSTALL_OPTS_ARRAY="${package_var_name}_MAKE_INSTALL_OPTS_ARRAY[@]"
   local PACKAGE_MAKE_INSTALL_TARGET="${package_var_name}_MAKE_INSTALL_TARGET"
+
+  echo "About to run" "$MAKE" "${!PACKAGE_MAKE_INSTALL_TARGET:-install}" $MAKE_INSTALL_OPTS ${!PACKAGE_MAKE_INSTALL_OPTS} "${!PACKAGE_MAKE_INSTALL_OPTS_ARRAY}"
+  echo "PWD=$PWD"
+  env
+
+  echo "Install: about to run" "$MAKE" "${!PACKAGE_MAKE_INSTALL_TARGET:-install}" $MAKE_INSTALL_OPTS ${!PACKAGE_MAKE_INSTALL_OPTS} "${!PACKAGE_MAKE_INSTALL_OPTS_ARRAY}"
+  echo "PWD=$PWD"
+  env
+  read abc
 
   { "$MAKE" "${!PACKAGE_MAKE_INSTALL_TARGET:-install}" $MAKE_INSTALL_OPTS ${!PACKAGE_MAKE_INSTALL_OPTS} "${!PACKAGE_MAKE_INSTALL_OPTS_ARRAY}"
   } >&4 2>&1
@@ -1626,7 +1633,7 @@ build_package_mac_openssl() {
   # gives precedence to the last -j option, so we can override that.
   package_option openssl make -j 1
 
-  build_package_standard "$@" depend
+  build_package_standard "$@"
 
   # Extract root certs from the system keychain in .pem format and rehash.
   local pem_file="$OPENSSLDIR/cert.pem"
