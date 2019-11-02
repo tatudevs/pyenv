@@ -780,6 +780,12 @@ build_package_standard_build() {
       $CONFIGURE_OPTS ${!PACKAGE_CONFIGURE_OPTS} "${!PACKAGE_CONFIGURE_OPTS_ARRAY}" || return 1
   ) >&4 2>&1
 
+  if [ -n "$2" ]; then
+      echo "Run make in $PWD with target $2"
+      { "$MAKE" "$2"
+      } >&4 2>&1
+  fi
+
   { "$MAKE" $MAKE_OPTS ${!PACKAGE_MAKE_OPTS} "${!PACKAGE_MAKE_OPTS_ARRAY}"
   } >&4 2>&1
 }
@@ -1620,7 +1626,7 @@ build_package_mac_openssl() {
   # gives precedence to the last -j option, so we can override that.
   package_option openssl make -j 1
 
-  build_package_standard "$@"
+  build_package_standard "$@" depend
 
   # Extract root certs from the system keychain in .pem format and rehash.
   local pem_file="$OPENSSLDIR/cert.pem"
