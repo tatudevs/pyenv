@@ -19,7 +19,6 @@ PYTHON_BUILD_VERSION="20180424"
 OLDIFS="$IFS"
 
 set -E
-set -x
 exec 3<&2 # preserve original stderr at fd 3
 
 
@@ -396,7 +395,7 @@ fetch_tarball() {
     fi
   fi
 
-  local tar_args="xzvf"
+  local tar_args="xzf"
   local package_filename="${package_name}.tar.gz"
 
   if [ "$package_url" != "${package_url%bz2}" ]; then
@@ -423,7 +422,6 @@ fetch_tarball() {
     download_tarball "$package_url" "$package_filename" "$checksum"
   fi
 
-  pwd
   { if tar $tar_args "$package_filename"; then
       if [ ! -d "$package_name" ]; then
         extracted_dir="$(find_extracted_directory)"
@@ -742,7 +740,6 @@ build_package_warn_unsupported() {
 }
 
 build_package_standard_build() {
-  set -x
   local package_name="$1"
 
   if [ "${MAKEOPTS+defined}" ]; then
@@ -774,15 +771,9 @@ build_package_standard_build() {
     if [ -z "$CC" ] && is_mac -ge 1010; then
       export CC=clang
     fi
-    echo "About to run configure in $PWD with CFLAGS=$CFLAGS"
-    #read xyz
     ${!PACKAGE_CONFIGURE:-./configure} --prefix="${!PACKAGE_PREFIX_PATH:-$PREFIX_PATH}" \
       $CONFIGURE_OPTS ${!PACKAGE_CONFIGURE_OPTS} "${!PACKAGE_CONFIGURE_OPTS_ARRAY}" || return 1
   ) >&4 2>&1
-
-  echo "About to run" "$MAKE" $MAKE_OPTS ${!PACKAGE_MAKE_OPTS} "${!PACKAGE_MAKE_OPTS_ARRAY}"
-  echo "PWD=$PWD"
-  env
 
   { "$MAKE" $MAKE_OPTS ${!PACKAGE_MAKE_OPTS} "${!PACKAGE_MAKE_OPTS_ARRAY}"
   } >&4 2>&1
@@ -795,15 +786,6 @@ build_package_standard_install() {
   local PACKAGE_MAKE_INSTALL_OPTS="${package_var_name}_MAKE_INSTALL_OPTS"
   local PACKAGE_MAKE_INSTALL_OPTS_ARRAY="${package_var_name}_MAKE_INSTALL_OPTS_ARRAY[@]"
   local PACKAGE_MAKE_INSTALL_TARGET="${package_var_name}_MAKE_INSTALL_TARGET"
-
-  echo "About to run" "$MAKE" "${!PACKAGE_MAKE_INSTALL_TARGET:-install}" $MAKE_INSTALL_OPTS ${!PACKAGE_MAKE_INSTALL_OPTS} "${!PACKAGE_MAKE_INSTALL_OPTS_ARRAY}"
-  echo "PWD=$PWD"
-  env
-
-  echo "Install: about to run" "$MAKE" "${!PACKAGE_MAKE_INSTALL_TARGET:-install}" $MAKE_INSTALL_OPTS ${!PACKAGE_MAKE_INSTALL_OPTS} "${!PACKAGE_MAKE_INSTALL_OPTS_ARRAY}"
-  echo "PWD=$PWD"
-  env
-  read abc
 
   { "$MAKE" "${!PACKAGE_MAKE_INSTALL_TARGET:-install}" $MAKE_INSTALL_OPTS ${!PACKAGE_MAKE_INSTALL_OPTS} "${!PACKAGE_MAKE_INSTALL_OPTS_ARRAY}"
   } >&4 2>&1
@@ -1625,7 +1607,6 @@ build_package_mac_openssl() {
   local nokerberos
   [[ "$1" != openssl-1.0.* ]] || nokerberos=1
 
-  #package_option openssl configure --openssldir="$OPENSSLDIR" zlib no-ssl3 ${nokerberos:+no-ssl2 no-krb5}
   package_option openssl configure --openssldir="$OPENSSLDIR" no-zlib no-ssl3 ${nokerberos:+no-ssl2 no-krb5}
   package_option openssl configure no-shared
 
@@ -1686,7 +1667,6 @@ use_homebrew_zlib() {
 }
 
 use_xcode_sdk_zlib() {
-  set -x
   local xc_sdk_path="$(xcrun --show-sdk-path 2>/dev/null || true)"
   if [ -d "$xc_sdk_path" ]; then
     echo "python-build: use zlib from xcode sdk"
@@ -1698,7 +1678,6 @@ use_xcode_sdk_zlib() {
 build_package_ldflags_dirs() {
   local arg dir
   set - $LDFLAGS
-  set -x
   while [ $# -gt 0 ]; do
     dir=""
     case "$1" in
