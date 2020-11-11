@@ -203,6 +203,7 @@ install_script() {
 }
 
 install_package_using() {
+  echo install package using
   local package_type="$1"
   local package_type_nargs="$2"
   local package_name="$3"
@@ -212,17 +213,24 @@ install_package_using() {
   local make_args=( "$package_name" )
   local arg last_arg
 
+  echo looping
   for arg in "${@:$(( $package_type_nargs + 1 ))}"; do
     if [ "$last_arg" = "--if" ]; then
+      echo last arg is if so do it and return
+      echo do $arg
       "$arg" || return 0
+      echo survived
     elif [ "$arg" != "--if" ]; then
       make_args["${#make_args[@]}"]="$arg"
     fi
     last_arg="$arg"
   done
 
+  echo "Done with for loop"
+
   pushd "$BUILD_PATH" >&4
   "fetch_${package_type}" "${fetch_args[@]}"
+  echo "Make package " "${make_args[@]}"
   make_package "${make_args[@]}"
   popd >&4
 
@@ -236,11 +244,17 @@ make_package() {
   shift
 
   pushd "$package_name" >&4
+  echo setup_builtin_patches "$package_name"
   setup_builtin_patches "$package_name"
+  echo before_install_package "$package_name"
   before_install_package "$package_name"
+  echo build_package "$package_name" $*
   build_package "$package_name" $*
+  echo after_install_package "$package_name"
   after_install_package "$package_name"
+  echo cleanup_builtin_patches "$package_name"
   cleanup_builtin_patches "$package_name"
+  echo fix_directory_permissions
   fix_directory_permissions
   popd >&4
 }
@@ -710,6 +724,7 @@ build_package() {
   [ -n "$HAS_PATCH" ] && apply_python_patch "$package_name"
 
   for command in $commands; do
+    echo "build_package_${command}" "$package_name"
     "build_package_${command}" "$package_name"
   done
 }
@@ -746,6 +761,8 @@ build_package_warn_unsupported() {
 
 build_package_standard_build() {
   local package_name="$1"
+  echo "BUILD PACKAGE STANDARD $1"
+  set -x
 
   if [ "${MAKEOPTS+defined}" ]; then
     MAKE_OPTS="$MAKEOPTS"
@@ -1347,14 +1364,16 @@ has_broken_mac_readline() {
 
 use_homebrew_readline() {
   if ! configured_with_package_dir "python" "readline/rlconf.h"; then
-    local libdir="$(brew --prefix readline 2>/dev/null || true)"
-    if [ -d "$libdir" ]; then
-      echo "python-build: use readline from homebrew"
-      export CPPFLAGS="-I$libdir/include ${CPPFLAGS}"
-      export LDFLAGS="-L$libdir/lib ${LDFLAGS}"
-    else
-      return 1
-    fi
+    #local libdir="$(brew --prefix readline 2>/dev/null || true)"
+    #if [ -d "$libdir" ]; then
+    #  echo "python-build: use readline from homebrew"
+    #  export CPPFLAGS="-I$libdir/include ${CPPFLAGS}"
+    #  export LDFLAGS="-L$libdir/lib ${LDFLAGS}"
+    #else
+    #  return 1
+    #fi
+    # NEVER use readline from homebrew
+    return 0
   fi
 }
 
@@ -1377,6 +1396,14 @@ build_package_mac_readline() {
   package_option readline configure --disable-shared
 
   build_package_standard "$@"
+}
+
+build_package_mac_gettext() {
+    package_option gettext configure --disable-shared
+    build_package_standard "$@"
+    GETTEXT_PREFIX_PATH="${PREFIX_PATH}/gettext"
+    export CPPFLAGS="-I${GETTEXT_PREFIX_PATH}/include ${CPPFLAGS}"
+    export LDFLAGS="-L${GETTEXT_PREFIX_PATH}/lib /usr/lib/libiconv.dylib ${LDFLAGS}"
 }
 
 build_package_mac_gdbm() {
@@ -2172,6 +2199,7 @@ if [ -n "$VERBOSE" ]; then
 fi
 
 export LDFLAGS="-L${PREFIX_PATH}/lib ${LDFLAGS}"
+echo "qqq set LDFLAGS=$LDFLAGS"
 export CPPFLAGS="-I${PREFIX_PATH}/include ${CPPFLAGS}"
 
 unset PYTHONHOME
@@ -2179,6 +2207,7 @@ unset PYTHONPATH
 
 trap build_failed ERR
 mkdir -p "$BUILD_PATH"
+echo SOURCE $DEFINITION_PATH
 source "$DEFINITION_PATH"
 [ -z "${KEEP_BUILD_PATH}" ] && rm -fr "$BUILD_PATH"
 trap - ERR
